@@ -4,6 +4,7 @@
 import pandas as pd
 import numpy as np
 import xgboost
+from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import KFold
 
@@ -33,7 +34,9 @@ model_xgb = xgboost.XGBClassifier(learning_rate=0.01,
                                   nthread=-1,
                                   seed=42,
                                   reg_alpha=0.0001)
-model_dict = {model_rf: 'rf', model_xgb: 'xgb'}
+model_svc = SVC(C=10, gamma=0.0007, max_iter=-1)
+
+model_dict = {model_rf: 'rf', model_xgb: 'xgb', model_svc: 'svc'}
 
 df_all_model = pd.DataFrame(columns=list(model_dict.values()))
 for model in model_dict.keys():
@@ -68,7 +71,10 @@ for model in model_dict.keys():
     # print(test_data_2, len(test_data_2))
 
 print('ok')
-# sub = pd.DataFrame(pd.read_csv('data/test.csv')['PassengerId'])
-# sub['Survived'] = list(map(int, ))
-# sub.to_csv("sub_rf.csv", index=False)
+df_all_model['sum'] = df_all_model.sum(1)
+df_all_model['pred'] = 0
+df_all_model['pred'][df_all_model['sum'] > 1] = 1
+sub = pd.DataFrame(pd.read_csv('data/test.csv')['PassengerId'])
+sub['Survived'] = df_all_model['pred']
+sub.to_csv("sub_ensemble.csv", index=False)
 
