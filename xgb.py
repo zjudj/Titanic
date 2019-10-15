@@ -1,9 +1,6 @@
-#!/usr/bin/python3.6
-# -*- coding:utf-8 -*-
-
+import xgboost
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import KFold
 
 
@@ -20,7 +17,17 @@ X_train = train_data.drop('Survived', axis=1).values
 X_test = test_data.drop('Survived', axis=1).values
 
 kf = KFold(n_splits=10, random_state=2019)
-rf = RandomForestClassifier(n_estimators=300, n_jobs=-1, bootstrap=True, max_features=0.4)
+
+xgb = xgboost.XGBClassifier(learning_rate=0.01,
+                            n_estimators=1000,
+                            max_depth=3,
+                            gamma=0.001,
+                            subsample=0.7,
+                            colsample_bytree=0.7,
+                            objective='reg:linear',
+                            nthread=-1,
+                            seed=42,
+                            reg_alpha=0.0001)
 sum_loss = 0
 df_y_pred = pd.DataFrame()
 fold = 1
@@ -30,25 +37,22 @@ for train_index, test_index in kf.split(X_train):
     kf_X_test = X_train[test_index]
     kf_y_test = y_train[test_index]
 
-    rf.fit(kf_X_train, kf_y_train)
-    kf_y_pred = rf.predict(kf_X_test)
+    xgb.fit(kf_X_train, kf_y_train)
+    kf_y_pred = xgb.predict(kf_X_test)
     single_loss = loss(kf_y_test, kf_y_pred)
-    print(single_loss)
+    # print(single_loss)
     sum_loss += single_loss
 
-    y_pred = rf.predict(X_test)
+    y_pred = xgb.predict(X_test)
     df_y_pred['fold_'+str(fold)] = y_pred
     fold += 1
 print("average loss:%s" % (sum_loss/10))
 
 df_y_pred['sum'] = df_y_pred.sum(1)
 
-print((df_y_pred['sum'] > 0) & (df_y_pred['sum'] < 10))
-test_data_2 = test_data.loc[(df_y_pred['sum'] > 0) & (df_y_pred['sum'] < 10)]
-print(test_data_2, len(test_data_2))
+df_y_pred['sub'] = 0
+df_y_pred['sub'].loc[df_y_pred['sum'] > 5] = 1
 
-print('ok')
 sub = pd.DataFrame(pd.read_csv('data/test.csv')['PassengerId'])
-sub['Survived'] = list(map(int, ))
-sub.to_csv("sub_rf.csv", index=False)
-
+sub['Survived'] = df_y_pred['sub'].values
+sub.to_csv("sub_xgb.csv", index=False)
